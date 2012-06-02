@@ -1,0 +1,89 @@
+#!/usr/bin/env bash
+
+# -e : Exit immediately if a simple command exits with a non-zero status.
+set -e
+
+validate_url() {
+  url="$1"
+  valid_url=$(echo "$1" | grep '^\(git\|https\)://github.com/[A-Za-z0-9_]*/[^/]*.git$' || true)
+  if [ -z "$valid_url" ]; then
+    echo "fakegit: Specified invalid GitHub URL \`$url'" >&2
+    exit 1
+  fi
+}
+
+fetch_command() {
+  if type curl &>/dev/null; then
+    echo "curl" "-L" "$@"
+  elif type wget &>/dev/null; then
+    echo "wget" "-O-" "$@"
+  fi
+}
+
+log()  { printf "fakegit: %b\n" "$*" >&2 ; return $? ;  }
+
+fail() { log "ERROR: $*\n" ; exit 1 ; }
+
+fakegit_clone() {
+  local git_repo="$1"
+  validate_url $git_repo
+  local https_repo="${git_repo/#git:/https:}"
+  local svn_repo="${https_repo%*.git}"
+  local proj_name="${svn_repo##*/}"
+  local dir="${2:-$proj_name}"
+
+  if type svn &>/dev/null; then
+    local svn_command="svn checkout ${svn_repo}/trunk $dir"
+    log "Instaed of git, executing:" "$svn_command"
+    $svn_command
+  else
+    local fetch_command=$(fetch_command "${svn_repo}/tarball/master" || true)
+    local extract_command="tar xzf - --strip-components 1 -C $dir"
+    if [ -z "$fetch_command" ] ; then
+      fail "Please install \`svn', \`curl' or \`wget' and try again"
+      exit 1
+    fi
+    mkdir -p $dir
+    log "Instaed of git, executing:" $fetch_command "|" $extract_command
+    $fetch_command | $extract_command
+  fi
+}
+
+fakegit_help() {
+  case "$1" in
+  "" )
+    echo "usage: fakegit <command> [<args>]"
+    ;;
+  "clone" )
+    echo "usage: fakegit clone <GitHub repository> [<directory>]"
+    ;;
+  * )
+    command_path="$(command -v "fakegit_$1" || true)"
+    if [ -n "$command_path" ]; then
+      echo "Sorry, the \`$1' command isn't documented yet."
+      echo
+      echo "You can view the command's source here:"
+      echo "$command_path"
+      echo
+    else
+      echo "fakegit: no such command \`$1'"
+    fi
+  esac
+}
+
+command="$1"
+case "$command" in
+  "" | "-h" | "--help" )
+    echo -e "fakegit 0.0.1\n$(fakegit_help)" >&2
+    ;;
+  * )
+    command_path="$(command -v "fakegit_$command" || true)"
+    if [ -z "$command_path" ]; then
+      echo "fakegit: Unsupported command \`$command'" >&2
+      exit 1
+    fi
+
+    shift 1
+    "$command_path" "$@"
+  ;;
+esac
