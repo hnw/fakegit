@@ -13,7 +13,7 @@ To install fakegit, type as follows:
 
     $ mkdir -p $HOME/bin
     $ export PATH=$HOME/bin:$PATH
-    $ curl -L https://raw.github.com/hnw/fakegit/bin/fakegit > $HOME/bin/git
+    $ curl -L https://raw.github.com/hnw/fakegit/master/bin/fakegit > $HOME/bin/git
     $ chmod a+x $HOME/bin/git
     $ hash -r
 
