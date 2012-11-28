@@ -3,7 +3,7 @@ fakegit(1) -- Emulating "git clone" with other tools
 
 ## SYNOPSIS
 
-`fakegit clone <GitHub Repository URL> [<directory>]`
+`fakegit clone [-b <branch_name>] <GitHub Repository URL> [<directory>]`
 
 ## DESCRIPTION
 
